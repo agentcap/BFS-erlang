@@ -5,13 +5,5 @@ print_graph([]) ->
 	ok;
 print_graph([Elem | AdjList]) -> 
 	{Vertex, List} = Elem,
-	io:format("Vertex ~w: ",[Vertex]),
-	print_list(List),
-	io:format("\n"),
+	io:format("Vertex ~w: ~w\n",[Vertex, List]),
 	print_graph(AdjList).
-
-print_list([]) ->
-	ok; 
-print_list([Num|List]) ->
-	io:format("~w ",[Num]),
-	print_list(List).

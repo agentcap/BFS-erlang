@@ -4,8 +4,9 @@
 read_input(Device) ->
 	{ok, [NoProcess]} = io:fread(Device, [], "~d"),
 	{ok, [N]} = io:fread(Device, [], "~d"),
+	{ok, [Src]} = io:fread(Device, [], "~d"),
 	AdjList = read_graph(N, [], Device),
-	{NoProcess, N, AdjList}.
+	{NoProcess, N, Src, AdjList}.
 
 read_graph(0, AdjList, _) ->
 	AdjList;
