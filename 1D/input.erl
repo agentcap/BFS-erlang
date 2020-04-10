@@ -13,7 +13,7 @@ read_graph(0, AdjList, _) ->
 read_graph(N, AdjList, Device) ->
 	{ok, [Vertex]} = io:fread(Device, [], "~d"),
 	{ok, [Cnt]} = io:fread(Device, [], "~d"),
-	read_graph(N-1, lists:append(AdjList, [{Vertex, read_adjacent(Cnt, [], Device)}]), Device).
+	read_graph(N-1, lists:append(AdjList, [{Vertex, sets:from_list(read_adjacent(Cnt, [], Device))}]), Device).
 	
 read_adjacent(Cnt, Adj, _) when Cnt == 0 ->
 	Adj;
