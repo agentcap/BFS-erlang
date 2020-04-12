@@ -1,6 +1,6 @@
 % erlc *.erl && erl -noshell -s bfs_1d main inp -s init stop
 -module('bfs_1d').
--export([main/1, proc_func/5, run_iters/6, broadcast_all/5, collect_all/3]).
+-export([main/1, proc_func/5, run_iters/6, broadcast_all/6, collect_all/4]).
 
 main([InpFile]) ->
 	{ok, InpDevice} = file:open(InpFile, [read]),
@@ -9,7 +9,7 @@ main([InpFile]) ->
 	io:format("--------- Input Graph ---------\n",[]),
 	utils:print_graph(AdjList),
 	
-	io:format("--------- Creating Processes\n",[]),
+	io:format("---------   Output    ---------\n",[]),
 	M = utils:get_m(N, NoProcess, N rem NoProcess),
 	create_process(1, NoProcess, M, AdjList, Src).
 
@@ -31,45 +31,51 @@ proc_func(Pid, NoProcess, Src, M, _AdjList) ->
 
 run_iters(_, _, L, _, _, _) when L > 5 -> ok;
 run_iters(Pid, NoProcess, L, Depth, M, AdjList) ->
-	GetNeighFunc = fun({V, D}) -> %Function to filter the vertices with depth L 
-			case D == L of
-				true -> {true, maps:get(V, AdjList)};
-				false -> false
-			end
-		end,
+	F = lists:filter(fun({_,D}) -> D == L end, Depth),
+	FLength = length(F),
 
-	_N = lists:filtermap(GetNeighFunc, Depth),
+	GetNeighFunc = fun({V, _}) -> maps:get(V, AdjList) end,%Function to filter the vertices with depth L
+	_N = lists:map(GetNeighFunc, F),
+
 	N = sets:to_list(sets:union(_N)),
 
-	broadcast_all(Pid, 1, NoProcess, M, N),
-	OtherN = collect_all(0, NoProcess, sets:new()),
+	broadcast_all(Pid, 1, NoProcess, M, N, FLength),
+	{OtherN, OtherF} = collect_all(0, NoProcess, sets:new(), [FLength]),
+
 	
 	OwnerFunc = fun(X) -> (M*(Pid-1) < X) and (X =< M*Pid) end,
 	MyN = sets:from_list(lists:filter(OwnerFunc, N)),
 	NewN = sets:to_list(sets:union(MyN, OtherN)),
 
 	NewDepth = utils:update_depth(NewN,Depth,L+1),
-	io:format("Iter: ~w , Pid:~w , New Depths : ~w\n",[L, Pid, NewDepth]),
 	
-	run_iters(Pid, NoProcess, L+1, NewDepth, M, AdjList).
+	Terminate = lists:all(fun(Y) -> Y == 0 end, OtherF),
+
+	if
+		Terminate ->
+			io:format("Iter: ~w, Pid:~w, [{Vertex, Depth}] : ~w\n",[L, Pid, NewDepth]);
+		true ->
+			run_iters(Pid, NoProcess, L+1, NewDepth, M, AdjList)
+	end.
 
 % Brodcasts to all functions execpt itself
-broadcast_all(_, SendPid, NoProcess, _, _) when SendPid > NoProcess ->
+broadcast_all(_, SendPid, NoProcess, _, _,_) when SendPid > NoProcess ->
 	ok;
-broadcast_all(MyPid, SendPid, NoProcess, M, _N) when MyPid == SendPid ->
-	broadcast_all(MyPid, SendPid + 1, NoProcess, M, _N);
-broadcast_all(MyPid, SendPid, NoProcess, M, _N) ->
+broadcast_all(MyPid, SendPid, NoProcess, M, _N, FLength) when MyPid == SendPid ->
+	broadcast_all(MyPid, SendPid + 1, NoProcess, M, _N, FLength);
+broadcast_all(MyPid, SendPid, NoProcess, M, _N, FLength) ->
 	OwnerFunc = fun(X) -> (M*(SendPid-1) < X) and (X =< M*SendPid) end,
 	{N, NextN} = lists:partition(OwnerFunc, _N),
-	list_to_atom("pid" ++ integer_to_list(SendPid)) ! {neighbours, N},
-	broadcast_all(MyPid, SendPid + 1, NoProcess, M, NextN).
+	list_to_atom("pid" ++ integer_to_list(SendPid)) ! {neighbours, N, FLength},
+	broadcast_all(MyPid, SendPid + 1, NoProcess, M, NextN, FLength).
 
 % Collects N send from all the other processes
-collect_all(Cnt, NoProcess, _N) when Cnt >= NoProcess - 1 ->
-	_N;
-collect_all(Cnt, NoProcess, _N) ->
+collect_all(Cnt, NoProcess, _N, Fs) when Cnt >= NoProcess - 1 ->
+	{_N, Fs};
+collect_all(Cnt, NoProcess, _N, _Fs) ->
 	receive
-		{neighbours, List} ->
-			N = sets:union(_N,sets:from_list(List))
+		{neighbours, List, F} ->
+			N = sets:union(_N,sets:from_list(List)),
+			Fs = [F | _Fs]
 	end,
-	collect_all(Cnt+1, NoProcess, N).
+	collect_all(Cnt+1, NoProcess, N, Fs).
