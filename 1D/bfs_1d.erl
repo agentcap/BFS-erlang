@@ -3,10 +3,9 @@
 -export([main/1, proc_func/5, run_iters/6, broadcast_all/6, collect_all/4]).
 
 main([InpFile]) ->
-	{ok, InpDevice} = file:open(InpFile, [read]),
-	{NoProcess, N, Src, AdjList} = input:read_input(InpDevice),
+	{NoProcess, N, Src, AdjList} = input:read_input(InpFile),
 	
-	io:format("--------- Input Graph ---------\n",[]),
+	io:format("--------- Input Graph ---------\n"),
 	utils:print_graph(AdjList),
 	
 	io:format("---------   Output    ---------\n",[]),

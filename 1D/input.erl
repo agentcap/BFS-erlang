@@ -1,22 +1,18 @@
 -module('input').
 -export([read_input/1]).
 
-read_input(Device) ->
-	{ok, [NoProcess]} = io:fread(Device, [], "~d"),
-	{ok, [N]} = io:fread(Device, [], "~d"),
-	{ok, [Src]} = io:fread(Device, [], "~d"),
-	AdjList = read_graph(N, [], Device),
+read_input(Input) ->
+	{ok, Text} = file:read_file(Input),
+	[MetaString | DataString] = string:tokens(string:strip(binary_to_list(Text), both, $\n), "\n"),
+
+	[NoProcess, N, Src] = lists:map(fun(X) -> {Int, _} = string:to_integer(X), Int end, string:tokens(MetaString, " ")),
+	AdjList = read_adjList(DataString, []),
+
 	{NoProcess, N, Src, AdjList}.
 
-read_graph(0, AdjList, _) ->
+read_adjList([], AdjList) -> 
 	AdjList;
-read_graph(N, AdjList, Device) ->
-	{ok, [Vertex]} = io:fread(Device, [], "~d"),
-	{ok, [Cnt]} = io:fread(Device, [], "~d"),
-	read_graph(N-1, lists:append(AdjList, [{Vertex, sets:from_list(read_adjacent(Cnt, [], Device))}]), Device).
-	
-read_adjacent(Cnt, Adj, _) when Cnt == 0 ->
-	Adj;
-read_adjacent(Cnt, Adj, Device) ->
-	{ok, [Num]} = io:fread(Device, [], "~d"),
-	read_adjacent(Cnt-1, [Num | Adj], Device).
+read_adjList([Cur|Rest], _AdjList) ->
+	[Vertex | List] = lists:map(fun(X) -> {Int, _} = string:to_integer(X), Int end, string:tokens(Cur, " ")),
+	AdjList = lists:append(_AdjList, [{Vertex, sets:from_list(List)}]),
+	read_adjList(Rest, AdjList).
