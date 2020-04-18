@@ -14,10 +14,10 @@ main([InpFile]) ->
 
 % Create the required Number of process and distributes the vertices across them
 create_process(Pid, NoProcess, M, AdjList, Src) when Pid == NoProcess ->
-	register(list_to_atom("pid" ++ integer_to_list(Pid)), spawn('bfs_1d', proc_func, [Pid, NoProcess, Src, M, AdjList]));
+	register(list_to_atom("pid" ++ integer_to_list(Pid)), spawn_link('bfs_1d', proc_func, [Pid, NoProcess, Src, M, AdjList]));
 create_process(Pid, NoProcess, M, _AdjList, Src) -> 
 	{AdjList, RestList} = lists:split(M, _AdjList),
-	register(list_to_atom("pid" ++ integer_to_list(Pid)), spawn('bfs_1d', proc_func, [Pid, NoProcess, Src, M, AdjList])),
+	register(list_to_atom("pid" ++ integer_to_list(Pid)), spawn_link('bfs_1d', proc_func, [Pid, NoProcess, Src, M, AdjList])),
 	create_process(Pid+1, NoProcess, M, RestList, Src).
 
 % Function which runs on each process and Initializes the Depth and runs the iterations
