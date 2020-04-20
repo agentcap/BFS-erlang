@@ -2,20 +2,13 @@
 # metafile <r> <c> <mx> <source>
 import sys
 from random import randint
+from math import ceil
 
 def find_column(b, r):
-	if b % r == 0:
-		return b/r
-	else:
-		return (b - b%r)/r + 1
+	return int(ceil(b/float(r)))
 
-def find_row(a, r, c):
-	tmp = 0
-	if a % c == 0:
-		tmp = a/c
-	else:
-		tmp = (a - a%c)/c + 1
-	return a - (tmp-1)*r
+def find_row(a, r, c, mx):
+	return int((ceil(a/float(mx))-1))%r + 1
 
 n = int(sys.argv[1]) #vertices
 r = int(sys.argv[2]) #r
@@ -61,7 +54,7 @@ for i in range(m):
 	adj1[a].append(b)
 	adj1[b].append(a)
 	zy = find_column(b, my)
-	zx = find_row(a, r, c)
+	zx = find_row(a, r, c, mx)
 	if a not in proc[zx][zy]:
 		proc[zx][zy][a] = {}
 	proc[zx][zy][a][b] = 1
@@ -71,7 +64,7 @@ for i in range(m):
 	proc[zx][zy][b][a] = 1
 
 	zy = find_column(a, my)
-	zx = find_row(b, r, c)
+	zx = find_row(b, r, c, mx)
 	if a not in proc[zx][zy]:
 		proc[zx][zy][a] = {}
 	proc[zx][zy][a][b] = 1
@@ -88,5 +81,8 @@ for i in range(1,r+1):
 			for val in proc[i][j][key]:
 				tmp += " " + str(val)
 			tmp += "\n"
-		with open(inpdir + "/" + name + "_" + str(i) + "_" + str(j), 'w') as f:
+		with open(inpdir + "/" + str(i) + "_" + str(j), 'w') as f:
 			f.write(tmp)
+
+# for key in adj1:
+# 	print(key, adj1[key])
