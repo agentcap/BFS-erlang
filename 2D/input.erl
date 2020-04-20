@@ -1,30 +1,21 @@
 -module('input').
--export([read_input/3, read_meta/1]).
+-export([read_input_separate/3, read_meta/1]).
 
-read_input(Pi, Pj, InpDir) ->
-	{ok, Device} = file:open(filename:join([InpDir, "inp_" ++ integer_to_list(Pi) ++ "_" ++ integer_to_list(Pj)]), [read]),
-	{ok, [N]} = io:fread(Device, [], "~d"),
-	% io:format("REad N \n").
-	AdjList = read_graph(N, [], Device),
-	AdjList.
-
-read_graph(0, AdjList, _) ->
-	AdjList;
-read_graph(N, AdjList, Device) ->
-	{ok, [Vertex]} = io:fread(Device, [], "~d"),
-	{ok, [Cnt]} = io:fread(Device, [], "~d"),
-	read_graph(N-1, lists:append(AdjList, [{Vertex, sets:from_list(read_adjacent(Cnt, [], Device))}]), Device).
-	
-read_adjacent(Cnt, Adj, _) when Cnt == 0 ->
-	Adj;
-read_adjacent(Cnt, Adj, Device) ->
-	{ok, [Num]} = io:fread(Device, [], "~d"),
-	read_adjacent(Cnt-1, [Num | Adj], Device).
-
-read_meta(MetaFile) ->
-	{ok, Device} = file:open(MetaFile, [read]),
-	{ok, [R]} = io:fread(Device, [], "~d"),
-	{ok, [C]} = io:fread(Device, [], "~d"),
-	{ok, [M]} = io:fread(Device, [], "~d"),
-	{ok, [Src]} = io:fread(Device, [], "~d"),
+read_meta(Input) ->
+	{ok, Text} = file:read_file(Input),
+	MetaString = string:tokens(string:strip(binary_to_list(Text), both, $\n), " "),
+	[R, C, M, Src] = lists:map(fun(X) -> {Int, _} = string:to_integer(X), Int end, MetaString),
 	{R, C, M, Src}.
+
+read_input_separate(Pi, Pj, InputDir) ->
+	Input = filename:join([InputDir, integer_to_list(Pi) ++ "_" ++ integer_to_list(Pj)]),
+	{ok, Text} = file:read_file(Input),
+	DataString = string:tokens(string:strip(binary_to_list(Text), both, $\n), "\n"),
+	read_adjList(DataString, []).
+
+read_adjList([], AdjList) -> 
+	AdjList;
+read_adjList([Cur|Rest], _AdjList) ->
+	[Vertex | List] = lists:map(fun(X) -> {Int, _} = string:to_integer(X), Int end, string:tokens(Cur, " ")),
+	AdjList = lists:append(_AdjList, [{Vertex, sets:from_list(List)}]),
+	read_adjList(Rest, AdjList).
