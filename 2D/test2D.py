@@ -1,5 +1,5 @@
-# python test2D.py <processes> <vertices> <r> <c> <filename> <inpdir>
-# metafile <processes> <vertices> <source> <r> <c> <mx>
+# python test2D.py <vertices> <r> <c> <filename> <inpdir>
+# metafile <r> <c> <mx> <source>
 import sys
 from random import randint
 
@@ -17,16 +17,15 @@ def find_row(a, r, c):
 		tmp = (a - a%c)/c + 1
 	return a - (tmp-1)*r
 
-p = int(sys.argv[1]) #processes
-n = int(sys.argv[2]) #vertices
-r = int(sys.argv[3]) #r
-c = int(sys.argv[4]) #c
-name = sys.argv[5] #filename
-inpdir = sys.argv[6] #inpdir
+n = int(sys.argv[1]) #vertices
+r = int(sys.argv[2]) #r
+c = int(sys.argv[3]) #c
+name = sys.argv[4] #filename
+inpdir = sys.argv[5] #inpdir
 
-m = n-1
+# m = n-1
 m = randint(n-1,min(1000000, n*(n-1)/2))
-# src = randint(1, n)%n + 1
+src = randint(1, n)%n + 1
 mx = 0
 my = 0
 
@@ -41,8 +40,7 @@ else:
 	my = (n - n%c)/c + 1
 
 with open(name, "w") as f:
-	temp = str(p) + " " + str(n) + " " + str(src) + " "
-	temp += str(r) + " " + str(c) + " " + str(mx) + "\n"
+	temp = str(r) + " " + str(c) + " " + str(mx) + " " + str(src) + "\n"
 	f.write(temp)
 
 adj1 = {}
