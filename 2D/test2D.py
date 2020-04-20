@@ -25,8 +25,8 @@ name = sys.argv[5] #filename
 inpdir = sys.argv[6] #inpdir
 
 m = n-1
-# m = randint(n-1,min(1000000, n*(n-1)/2))
-src = randint(1, n)%n + 1
+m = randint(n-1,min(1000000, n*(n-1)/2))
+# src = randint(1, n)%n + 1
 mx = 0
 my = 0
 
