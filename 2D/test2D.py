@@ -88,5 +88,5 @@ for i in range(1,r+1):
 			for val in proc[i][j][key]:
 				tmp += " " + str(val)
 			tmp += "\n"
-		with open(inpdir + "/" + str(i) + "_" + str(j), 'w') as f:
+		with open(inpdir + "/" + name + "_" + str(i) + "_" + str(j), 'w') as f:
 			f.write(tmp)
