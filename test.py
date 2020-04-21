@@ -21,10 +21,15 @@ src = randint(1, n)%n + 1
 if not os.path.exists(inpdir):
 	os.mkdir(inpdir)
 
-
+## Filenames
+f1D = 'inp1D'
+f2D = 'inp2D'
+fSrd1 = 'inpSrdMeta'
+fSrd2 = 'inpSrdAdj'
+fSeq1 = 'inpSeqMeta'
+fSeq2 = 'inpSeqAdj'
 
 ## 1D test case generation
-f1D = 'inp1D'
 
 with open(inpdir + "/" + f1D, "w") as f:
 	f.write(str(p) + " " + str(n) + " " + str(src) + "\n")
@@ -111,7 +116,6 @@ for i in range(n):
 
 
 ## 2D test case generation
-f2D = 'inp2D'
 
 with open(inpdir + "/" + f2D, "w") as f:
 	temp = str(r) + " " + str(c) + " " + str(mx) + " " + str(src) + "\n"
@@ -129,8 +133,6 @@ for i in range(1,r+1):
 			f.write(tmp)
 
 ## Shared test case generation
-fSrd1 = 'inpSrdMeta'
-fSrd2 = 'inpSrdAdj'
 
 tmp1 = ""
 tmp1 += str(p) + " " + str(src) + "\n"
@@ -149,8 +151,6 @@ with open(inpdir + "/" + fSrd2, "w") as f:
 
 
 ## Seq test case generation
-fSeq1 = 'inpSeqMeta'
-fSeq2 = 'inpSeqAdj'
 
 with open(inpdir + "/" + fSeq1, "w") as f:
 	f.write(str(src) + "\n")
