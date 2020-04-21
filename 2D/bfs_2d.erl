@@ -33,12 +33,8 @@ proc_func(Pi, Pj, R, C, M, Src, InpDir, Parent) ->
 	
 	AdjList = maps:from_list(_AdjList),
 
-	% io:format("P~w~w AdjList: ~w\n", [Pi,Pj, AdjList]).
 	run_iters(Pi, Pj, R, C, 0, Depth, M, AdjList, Parent).
 
-
-run_iters(_, _, _, _, L, _, _, _, _) when L > 5 ->
-	ok;
 run_iters(Pi, Pj, R, C, L, Depth, M, AdjList, Parent) ->
 	_F = lists:filter(fun({_,D}) -> D == L end, Depth),
 	F = lists:map(fun({V,_}) -> V end, _F),
@@ -51,8 +47,10 @@ run_iters(Pi, Pj, R, C, L, Depth, M, AdjList, Parent) ->
 				F_collected = collect_F_from_column(0, R, F, L),
 				% io:format("Iter: ~w P~w~w F_collected: ~w\n",[L, Pi, Pj, F_collected]),
 
+				F_filtered = lists:filter(fun(A) -> maps:is_key(A, AdjList) end, F_collected),
+
 				GetNeighFunc = fun(A) -> maps:get(A, AdjList) end,
-				_N = lists:map(GetNeighFunc, F_collected),
+				_N = lists:map(GetNeighFunc, F_filtered),
 
 
 				OwnerFunc = fun(X) -> (((Pj-1)*R + Pi -1)*M < X) and (X =< (((Pj-1)*R + Pi)*M)) end,
@@ -68,11 +66,11 @@ run_iters(Pi, Pj, R, C, L, Depth, M, AdjList, Parent) ->
 				{ReqUpdate, AlreadyUpdated} = lists:partition(fun({_,T})-> T == inf end, Depth),
 				UpdatedDepth = utils:update_depth(N, ReqUpdate, L+1),
 				NewDepth = lists:append(UpdatedDepth, AlreadyUpdated),
-				% io:format("Iter: ~w P~w~w NewDepth: ~w\n",[L, Pi, Pj, NewDepth]),
+				% io:format("Iter: ~w P~w~w NewDepth: \n",[L, Pi, Pj]),
 				run_iters(Pi, Pj, R, C, L+1, NewDepth, M, AdjList, Parent);
 
 		{L, terminate} ->
-				io:format("P~w~w FinalDepth: ~w\n",[Pi, Pj, Depth])
+				io:format("Iter: ~w, P~w_~w Terminated\n",[L, Pi, Pj])
 	end.
 
 

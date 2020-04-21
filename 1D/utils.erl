@@ -16,10 +16,4 @@ get_m(N, NoProcess, Rem) ->
 update_depth([], Depth, _) -> 
 	Depth;
 update_depth([V|N], Depth, L) ->
-	case lists:keyfind(V, 1, Depth) of
-		{_, inf} -> 
-			NewDepth = lists:keyreplace(V, 1, Depth, {V,L});
-		_ -> 
-			NewDepth = Depth
-	end,
-	update_depth(N, NewDepth, L).
+	update_depth(N, lists:keyreplace(V, 1, Depth, {V,L}), L).
