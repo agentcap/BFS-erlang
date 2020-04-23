@@ -1,75 +1,86 @@
-% erlc *.erl && erl -noshell -s bfs_1d main inp -s init stop
+% erlc *.erl && erl -noshell -s bfs_1d main meta inp depth -s init stop
 -module('bfs_1d').
--export([main/1, proc_func/6, run_iters/7, broadcast_all/6, collect_all/4]).
+-export([main/1, proc_func/7, run_iters/8, broadcast_all/6, collect_all/4]).
 
-main([MetaFile, InpDir]) ->
+main([MetaFile, InpDir, Log]) ->
 	PrevTime = erlang:monotonic_time(),
-	{NoProcess, N, Src} = input:read_meta(MetaFile),
 	
+	% Reading meta data and creating the process
+	{NoProcess, N, Src} = input:read_meta(MetaFile),
 	M = utils:get_m(N, NoProcess, N rem NoProcess),
-	create_process(1, NoProcess, M, InpDir, Src),
+	create_process(1, NoProcess, M, InpDir, Src, Log),
 
+	% This check the status and informs the process whether to terminate or not
 	collect_and_send_status(1, NoProcess, 0, true),
-	CurTime = erlang:monotonic_time(),
-
-	TimeTaken = (CurTime - PrevTime)/1000000000,
-	io:format("1D -> ~w\n", [TimeTaken]).
 
 
-% Create the required Number of process and distributes the vertices across them
-create_process(Pid, NoProcess, _, _, _) when Pid > NoProcess ->
+	TimeTaken = (erlang:monotonic_time() - PrevTime)/1000000000,
+	case Log of
+		time -> io:format("TimeTaken: ~w\n", [TimeTaken]);
+		depth -> ok
+	end.
+
+
+% Create the required Number of process and registers the process with name pid<id>
+create_process(Pid, NoProcess, _, _, _, _) when Pid > NoProcess ->
 	ok;
-create_process(Pid, NoProcess, M, InpDir, Src) -> 
+create_process(Pid, NoProcess, M, InpDir, Src, Log) -> 
 	Parent = self(),
-	register(list_to_atom("pid" ++ integer_to_list(Pid)), spawn_link('bfs_1d', proc_func, [Pid, NoProcess, Src, M, InpDir, Parent])),
-	create_process(Pid+1, NoProcess, M, InpDir, Src).
+	register(list_to_atom("pid" ++ integer_to_list(Pid)), spawn_link('bfs_1d', proc_func, [Pid, NoProcess, Src, M, InpDir, Parent, Log])),
+	create_process(Pid+1, NoProcess, M, InpDir, Src, Log).
 
 % Function which runs on each process and Initializes the Depth and runs the iterations
-proc_func(Pid, NoProcess, Src, M, InpDir, Parent) ->
+proc_func(Pid, NoProcess, Src, M, InpDir, Parent, Log) ->
 	_AdjList = input:read_input_separate(InpDir, Pid),
 
+	% Initialize depth to inf for all except src with 0
 	_Depth = lists:map(fun({V,_}) -> {V, inf} end, _AdjList),
-	Depth = lists:keyreplace(Src, 1, _Depth, {Src, 0}), % Initialize src with 0
+	Depth = lists:keyreplace(Src, 1, _Depth, {Src, 0}), 
 
 	AdjList = maps:from_list(_AdjList),
 
-	run_iters(Pid, NoProcess, 0, Depth, M, AdjList, Parent).
+	run_iters(Pid, NoProcess, 0, Depth, M, AdjList, Parent, Log).
 
 
-run_iters(Pid, NoProcess, L, Depth, M, AdjList, Parent) ->
+run_iters(Pid, NoProcess, L, Depth, M, AdjList, Parent, Log) ->
 	F = lists:filter(fun({_,D}) -> D == L end, Depth),
 
-	Parent ! {fsize, L, length(F) == 0},
+	Parent ! {fsize, L, length(F) == 0}, % sends the size of the Frontier set to check the termination condition
 
 	receive
 		{L, continue} ->
 
+			% Get the Frontier set
 			GetNeighFunc = fun({V, _}) -> maps:get(V, AdjList) end, % Function to filter the vertices with depth L
 			_N = lists:map(GetNeighFunc, F),
-
 			N = sets:to_list(sets:union(_N)),
 
+			% Broadcast the frontier set and collect the frontier set from all the process
 			broadcast_all(Pid, 1, NoProcess, M, N, L),
 			OtherN = collect_all(0, NoProcess, sets:new(), L),
 
+			% Getting the Next frontier set
 			OwnerFunc = fun(X) -> (M*(Pid-1) < X) and (X =< M*Pid) end,
 			MyN = sets:from_list(lists:filter(OwnerFunc, N)),
 			NewN = sets:to_list(sets:union(MyN, OtherN)),
 
+			% Update the depth of vertices in the Next frontier set
 			{ReqUpdate, AlreadyUpdated} = lists:partition(fun({_,T})-> T == inf end, Depth),
-
 			UpdatedDepth = utils:update_depth(NewN,ReqUpdate,L+1),
-
 			NewDepth = lists:append(UpdatedDepth, AlreadyUpdated),
-			run_iters(Pid, NoProcess, L+1, NewDepth, M, AdjList, Parent);
 
+			% Run next iteration
+			run_iters(Pid, NoProcess, L+1, NewDepth, M, AdjList, Parent, Log);
 		{L, terminate} ->
-			ok
-				% io:format("Iter: ~w, Pid:~w, [{Vertex, Depth}] : ~w\n",[L, Pid, Depth])
-				% io:format("Iter: ~w, Pid:~w Teminated\n",[L, Pid])
+			case Log of
+				depth -> io:format("Iter: ~w, Pid:~w, [{Vertex, Depth}] : ~w\n",[L, Pid, Depth]);
+				time -> ok
+			end
 	end.
 
 
+
+%% Util Functions to communicate across processes.
 % Brodcasts to all functions execpt itself
 broadcast_all(_, SendPid, NoProcess, _, _,_) when SendPid > NoProcess ->
 	ok;

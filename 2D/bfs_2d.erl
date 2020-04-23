@@ -1,87 +1,93 @@
 % erlc *.erl && erl -noshell -s bfs_2d main inp -s init stop
 -module('bfs_2d').
--export([main/1, proc_func/8, broadcast_N_to_row/8]).
+-export([main/1, proc_func/9, broadcast_N_to_row/8]).
 
-main([MetaFile, InpDir]) ->
+main([MetaFile, InpDir, Log]) ->
 	PrevTime = erlang:monotonic_time(),
 
+	% Reading meta data and creating the process
 	{R, C, M, Src} = input:read_meta(MetaFile),
-	% io:format("R C M Src ~w ~w ~w ~w\n",[R, C, M, Src]).
-	create_process(1, R, C, M, Src, InpDir),
+	create_process(1, R, C, M, Src, InpDir, Log),
 
+	% This check the status and informs the process whether to terminate or not
 	collect_and_send_status(0, R, C, 0, true),
 	
-	CurTime = erlang:monotonic_time(),
-	TimeTaken = (CurTime - PrevTime)/1000000000,
-	io:format("2D -> ~w\n", [TimeTaken]).
+	TimeTaken = (erlang:monotonic_time() - PrevTime)/1000000000,
+	case Log of
+		time -> io:format("TimeTaken: ~w\n", [TimeTaken]);
+		depth -> ok
+	end.
 
-create_process(Pi, R, _, _, _, _) when Pi > R ->
+% Create the required Number of process (R*C) and registers the process with name pid<row>_<col>
+create_process(Pi, R, _, _, _, _, _) when Pi > R ->
 	ok;
-create_process(Pi, R, C, M, Src, InpDir) -> 
-	create_process_row(Pi, 1, R, C, M, Src, InpDir),
-	create_process(Pi+1, R, C, M, Src, InpDir).
-
-create_process_row(_, Pj, _, C, _, _, _) when Pj > C ->
+create_process(Pi, R, C, M, Src, InpDir, Log) -> 
+	create_process_row(Pi, 1, R, C, M, Src, InpDir, Log),
+	create_process(Pi+1, R, C, M, Src, InpDir, Log).
+create_process_row(_, Pj, _, C, _, _, _, _) when Pj > C ->
 	ok;
-create_process_row(Pi, Pj, R, C, M, Src, InpDir) ->
+create_process_row(Pi, Pj, R, C, M, Src, InpDir, Log) ->
 	Parent = self(),
-	register(list_to_atom("pid" ++ integer_to_list(Pi) ++ "_" ++ integer_to_list(Pj)), spawn('bfs_2d', proc_func, [Pi, Pj, R, C, M, Src, InpDir, Parent])),
-	create_process_row(Pi, Pj + 1, R, C, M, Src, InpDir).
+	register(list_to_atom("pid" ++ integer_to_list(Pi) ++ "_" ++ integer_to_list(Pj)), spawn('bfs_2d', proc_func, [Pi, Pj, R, C, M, Src, InpDir, Parent, Log])),
+	create_process_row(Pi, Pj + 1, R, C, M, Src, InpDir, Log).
 
-proc_func(Pi, Pj, R, C, M, Src, InpDir, Parent) ->
+% Function which runs on each process and Initializes the Depth and runs the iterations
+proc_func(Pi, Pj, R, C, M, Src, InpDir, Parent, Log) ->
 	OwnedVertices = lists:seq( 1+((Pj-1)*R + Pi -1)*M, ((Pj-1)*R + Pi)*M ),
 	_Depth = lists:map(fun(V) -> {V, inf} end, OwnedVertices),
 	Depth = lists:keyreplace(Src, 1, _Depth, {Src, 0}),
 
-	_AdjList = input:read_input_separate(Pi, Pj, InpDir),
-	% utils:print_graph(_AdjList),
-	
+	_AdjList = input:read_input_separate(Pi, Pj, InpDir), % Reading input
 	AdjList = maps:from_list(_AdjList),
 
-	run_iters(Pi, Pj, R, C, 0, Depth, M, AdjList, Parent).
+	run_iters(Pi, Pj, R, C, 0, Depth, M, AdjList, Parent, Log).
 
-run_iters(Pi, Pj, R, C, L, Depth, M, AdjList, Parent) ->
+run_iters(Pi, Pj, R, C, L, Depth, M, AdjList, Parent, Log) ->
 	_F = lists:filter(fun({_,D}) -> D == L end, Depth),
-	F = lists:map(fun({V,_}) -> V end, _F),
+	F = lists:map(fun({V,_}) -> V end, _F), % Frontier set
 
-	Parent ! {fsize, L, length(F) == 0},
+	Parent ! {fsize, L, length(F) == 0}, % sends the size of the Frontier set to check the termination condition
 
 	receive
 		{L, continue} ->
+				% Broadcast the frontier set to the processes in its column
 				broadcast_F_to_column(Pi, Pj, 1, R, F, L),
+
+				% Recieve the frontier from its column processs
 				F_collected = collect_F_from_column(0, R, F, L),
-				% io:format("Iter: ~w P~w~w F_collected: ~w\n",[L, Pi, Pj, F_collected]),
 
+
+				% Get the set of Neighbours
 				F_filtered = lists:filter(fun(A) -> maps:is_key(A, AdjList) end, F_collected),
-
 				GetNeighFunc = fun(A) -> maps:get(A, AdjList) end,
 				_N = lists:map(GetNeighFunc, F_filtered),
 
 
+				% Broadcast the neighbours (only the vertices which that process own) to the process in its row
 				OwnerFunc = fun(X) -> (((Pj-1)*R + Pi -1)*M < X) and (X =< (((Pj-1)*R + Pi)*M)) end,
 				{MyN, OtherN} = lists:partition(OwnerFunc, sets:to_list(sets:union(_N))),
-				% io:format("Iter: ~w P~w~w MyN: ~w OtherN: ~w\n",[L, Pi, Pj, MyN, OtherN]),
-
-
 				broadcast_N_to_row(Pi, Pj, 1, R, C, M, OtherN, L),
+
+				% Collecte the neighbours from the processes in its row
 				N_collected = collect_N_from_row(0, C, sets:from_list(MyN), L),
 				N = sets:to_list(N_collected),
-				% io:format("Iter: ~w P~w~w N_collected: ~w\n",[L, Pi, Pj, N]),
 
+				% Update the depth of the vertices in the Next frontier with depth as L+1
 				{ReqUpdate, AlreadyUpdated} = lists:partition(fun({_,T})-> T == inf end, Depth),
 				UpdatedDepth = utils:update_depth(N, ReqUpdate, L+1),
 				NewDepth = lists:append(UpdatedDepth, AlreadyUpdated),
-				% io:format("Iter: ~w P~w~w NewDepth: \n",[L, Pi, Pj]),
-				run_iters(Pi, Pj, R, C, L+1, NewDepth, M, AdjList, Parent);
-
+				
+				run_iters(Pi, Pj, R, C, L+1, NewDepth, M, AdjList, Parent, Log);
 		{L, terminate} ->
-				ok
-				% io:format("Iter: ~w, P~w_~w Terminated\n",[L, Pi, Pj])
-				% io:format("Iter: ~w, P~w_~w Depth: ~w\n",[L, Pi, Pj, Depth])
+				case Log of
+					depth -> io:format("Iter: ~w, Pid:~w_~w, Depth: ~w\n",[L, Pi, Pj, Depth]);
+					time -> ok
+				end
 	end.
 
 
 
+% Broadcast N to row while filtering the vertices which are owned by that process
 broadcast_N_to_row(_, _, ToPj, _, C, _, _, _) when ToPj > C ->
 	ok;
 broadcast_N_to_row(Pi, Pj, ToPj, R, C, M, _N, L) when ToPj == Pj ->
@@ -93,7 +99,7 @@ broadcast_N_to_row(Pi, Pj, ToPj, R, C, M, _N, L) ->
 	list_to_atom("pid" ++ integer_to_list(Pi) ++ "_" ++ integer_to_list(ToPj)) ! {neighbours, L, N},
 	broadcast_N_to_row(Pi, Pj, ToPj + 1, R, C, M, NextN, L).
 
-
+% Collects the neighbours from the process in its row
 collect_N_from_row(Cnt, C, N, _) when Cnt >= C - 1 ->
 	N;
 collect_N_from_row(Cnt, C, _N, L) ->
@@ -103,6 +109,7 @@ collect_N_from_row(Cnt, C, _N, L) ->
 	end.
 
 
+% Other util functions whoes functionality is alreay explained above.
 broadcast_F_to_column(_, _, ToPi, R, _, _) when ToPi > R ->
 	ok;
 broadcast_F_to_column(Pi, Pj, ToPi, R, F, L) when ToPi == Pi ->
