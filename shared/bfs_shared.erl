@@ -5,6 +5,8 @@
 -export([main/1, proc_func/2, run_iter/3]).
 
 main([MetaFile, InputFile]) ->
+	PrevTime = erlang:monotonic_time(),
+	
 	{NoProcess, Src} = input:read_meta(MetaFile),
 
 	create_process(1, NoProcess, InputFile),
@@ -13,7 +15,11 @@ main([MetaFile, InputFile]) ->
 
 	Depth = main_iter(0,[Src], [{Src, 0}], NoProcess),
 
-	io:format("Depth are ~w\n", [Depth]).
+	CurTime = erlang:monotonic_time(),
+	TimeTaken = (CurTime - PrevTime)/1000000000,
+	io:format("2D -> ~w\n", [TimeTaken]).
+
+	% io:format("Depth are ~w\n", [Depth]).
 
 create_process(Pid, NoProcess, _) when Pid > NoProcess ->
 	ok;

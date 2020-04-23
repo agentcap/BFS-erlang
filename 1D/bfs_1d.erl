@@ -3,12 +3,17 @@
 -export([main/1, proc_func/6, run_iters/7, broadcast_all/6, collect_all/4]).
 
 main([MetaFile, InpDir]) ->
+	PrevTime = erlang:monotonic_time(),
 	{NoProcess, N, Src} = input:read_meta(MetaFile),
 	
 	M = utils:get_m(N, NoProcess, N rem NoProcess),
 	create_process(1, NoProcess, M, InpDir, Src),
 
-	collect_and_send_status(1, NoProcess, 0, true).
+	collect_and_send_status(1, NoProcess, 0, true),
+	CurTime = erlang:monotonic_time(),
+
+	TimeTaken = (CurTime - PrevTime)/1000000000,
+	io:format("1D -> ~w\n", [TimeTaken]).
 
 
 % Create the required Number of process and distributes the vertices across them
@@ -59,8 +64,9 @@ run_iters(Pid, NoProcess, L, Depth, M, AdjList, Parent) ->
 			run_iters(Pid, NoProcess, L+1, NewDepth, M, AdjList, Parent);
 
 		{L, terminate} ->
-				% io:format("Iter: ~w, Pid:~w, [{Vertex, Depth}] : ~w\n",[L, Pid, NewDepth]);
-				io:format("Iter: ~w, Pid:~w Teminated\n",[L, Pid])
+			ok
+				% io:format("Iter: ~w, Pid:~w, [{Vertex, Depth}] : ~w\n",[L, Pid, Depth])
+				% io:format("Iter: ~w, Pid:~w Teminated\n",[L, Pid])
 	end.
 
 
@@ -84,7 +90,7 @@ collect_all(Cnt, NoProcess, _N, L) ->
 			collect_all(Cnt+1, NoProcess, sets:union(_N,sets:from_list(List)), L)
 	end.
 
-collect_and_send_status(Cnt, NoProcess, L, Status) when Cnt == NoProcess ->
+collect_and_send_status(Cnt, NoProcess, L, Status) when Cnt > NoProcess ->
 	case Status of
 		false ->
 			send_status(1, NoProcess, L, continue),

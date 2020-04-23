@@ -15,7 +15,7 @@ read_meta(Input) ->
 	{NoProcess, N, Src}.
 
 read_input_separate(InputDir, Pid) ->
-	Input = filename:join([InputDir, integer_to_list(Pid)]),
+	Input = filename:join([InputDir, "inp1D_" ++ integer_to_list(Pid)]),
 	{ok, Text} = file:read_file(Input),
 	DataString = string:tokens(string:strip(binary_to_list(Text), both, $\n), "\n"),
 	read_adjList(DataString, []).

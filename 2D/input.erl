@@ -8,7 +8,7 @@ read_meta(Input) ->
 	{R, C, M, Src}.
 
 read_input_separate(Pi, Pj, InputDir) ->
-	Input = filename:join([InputDir, integer_to_list(Pi) ++ "_" ++ integer_to_list(Pj)]),
+	Input = filename:join([InputDir, "inp2D_" ++ integer_to_list(Pi) ++ "_" ++ integer_to_list(Pj)]),
 	{ok, Text} = file:read_file(Input),
 	DataString = string:tokens(string:strip(binary_to_list(Text), both, $\n), "\n"),
 	read_adjList(DataString, []).

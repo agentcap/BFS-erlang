@@ -3,12 +3,17 @@
 -export([main/1, proc_func/8, broadcast_N_to_row/8]).
 
 main([MetaFile, InpDir]) ->
+	PrevTime = erlang:monotonic_time(),
+
 	{R, C, M, Src} = input:read_meta(MetaFile),
 	% io:format("R C M Src ~w ~w ~w ~w\n",[R, C, M, Src]).
 	create_process(1, R, C, M, Src, InpDir),
 
-	collect_and_send_status(0, R, C, 0, true).
-
+	collect_and_send_status(0, R, C, 0, true),
+	
+	CurTime = erlang:monotonic_time(),
+	TimeTaken = (CurTime - PrevTime)/1000000000,
+	io:format("2D -> ~w\n", [TimeTaken]).
 
 create_process(Pi, R, _, _, _, _) when Pi > R ->
 	ok;
@@ -70,7 +75,9 @@ run_iters(Pi, Pj, R, C, L, Depth, M, AdjList, Parent) ->
 				run_iters(Pi, Pj, R, C, L+1, NewDepth, M, AdjList, Parent);
 
 		{L, terminate} ->
-				io:format("Iter: ~w, P~w_~w Terminated\n",[L, Pi, Pj])
+				ok
+				% io:format("Iter: ~w, P~w_~w Terminated\n",[L, Pi, Pj])
+				% io:format("Iter: ~w, P~w_~w Depth: ~w\n",[L, Pi, Pj, Depth])
 	end.
 
 

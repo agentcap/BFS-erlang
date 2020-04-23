@@ -6,6 +6,8 @@
 
 main([MetaFile, InputFile]) ->
 	% io:format("Hello"),
+	PrevTime = erlang:monotonic_time(),
+
 	Src = input:read_meta(MetaFile),
 
 	_AdjList = input:read_input(InputFile),
@@ -15,7 +17,12 @@ main([MetaFile, InputFile]) ->
 
 	Depth = run_iter(0, AdjList, Visited, [Src], []),
 
-	io:format("Depth: ~w\n",[Depth]).
+	CurTime = erlang:monotonic_time(),
+
+	TimeTaken = (CurTime - PrevTime)/1000000000,
+	io:format("Seq -> ~w\n", [TimeTaken]).
+
+	% io:format("Depth: ~w\n",[Depth]).
 
 
 run_iter(_, _, _, [], Depth) ->
