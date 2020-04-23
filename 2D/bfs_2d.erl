@@ -1,4 +1,4 @@
-% erlc *.erl && erl -noshell -s bfs_2d main inp -s init stop
+% erlc *.erl && erl -noshell -s bfs_2d main meta inpDir depth -s init stop
 -module('bfs_2d').
 -export([main/1, proc_func/9, broadcast_N_to_row/8]).
 

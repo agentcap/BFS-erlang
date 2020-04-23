@@ -1,19 +1,20 @@
-% erlc *.erl && erl -noshell -s bfs meta input depth -s init stop
+% erlc *.erl && erl -noshell -s bfs main meta input depth -s init stop
 
 -module('bfs').
 -export([main/1]).
 
 main([MetaFile, InputFile, Log]) ->
-	PrevTime = erlang:monotonic_time(),
 
 	Src = input:read_meta(MetaFile), % Reading Src of graph
 
 	_AdjList = input:read_input(InputFile),
 	AdjList = maps:from_list(_AdjList), % Reading the Adjaceny list and storing it in map for faster access.
 
+	PrevTime = erlang:monotonic_time(),
+
 	Visited = maps:from_list(lists:map(fun(V) -> {V,false} end, lists:seq(1, length(_AdjList)))), % Initialize Visited array
 
-	Depth = run_iter(0, AdjList, Visited, [Src], []),
+	Depth = run_iter(0, AdjList, Visited, [Src], []), % Starting iter with Frontier set containing only src.
 
 	TimeTaken = (erlang:monotonic_time() - PrevTime)/1000000000,
 

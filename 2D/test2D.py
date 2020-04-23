@@ -84,5 +84,5 @@ for i in range(1,r+1):
 		with open(inpdir + "/" + str(i) + "_" + str(j), 'w') as f:
 			f.write(tmp)
 
-# for key in adj1:
-# 	print(key, adj1[key])
+for key in adj1:
+	print(key, adj1[key])

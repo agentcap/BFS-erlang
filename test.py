@@ -135,7 +135,7 @@ for i in range(1,r+1):
 ## Shared test case generation
 
 tmp1 = ""
-tmp1 += str(p) + " " + str(src) + "\n"
+tmp1 += str(2) + " " + str(src) + "\n"
 with open(inpdir + "/" + fSrd1, "w") as f:
 	f.write(tmp1)
 

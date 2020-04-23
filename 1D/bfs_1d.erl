@@ -1,4 +1,4 @@
-% erlc *.erl && erl -noshell -s bfs_1d main meta inp depth -s init stop
+% erlc *.erl && erl -noshell -s bfs_1d main meta inpDir depth -s init stop
 -module('bfs_1d').
 -export([main/1, proc_func/7, run_iters/8, broadcast_all/6, collect_all/4]).
 
